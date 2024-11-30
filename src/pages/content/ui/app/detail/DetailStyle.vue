@@ -1,21 +1,11 @@
 <template>
-  <UiElementSpacing
-    :computed-styles="properties.computedStyles"
-    class="mt-2"
-    title="margin"
-  >
-    <UiElementSpacing
-      :computed-styles="properties.computedStyles"
-      title="padding"
-    >
-      <div class="bg-primary bg-opacity-25 rounded-md text-center py-2 px-1">
-        {{ Math.floor(properties.size.width) }}x{{
-          Math.floor(properties.size.height)
-        }}
-      </div>
-    </UiElementSpacing>
-  </UiElementSpacing>
   <div class="mt-4 space-y-2">
+    <DetailTailwindCSS
+      :key="elSelector"
+      :css-text="styleData.currentProps.cssText"
+      :media="styleData.currentProps.media"
+      class="text-sm"
+    />
     <div
       v-for="(mediaCSS, index) in styleData.currentProps.media"
       :key="mediaCSS.mediaCondition"
@@ -97,6 +87,7 @@
 import { watch } from 'vue';
 import DetailCSSEditor from './DetailCSSEditor.vue';
 import UiElementSpacing from '@root/src/pages/components/ui/UiElementSpacing.vue';
+import DetailTailwindCSS from './DetailTailwindCSS.vue';
 import { ElementAppliedStyleRules } from '@root/src/utils/CSSRulesUtils';
 import {
   ElementBasicSelector,

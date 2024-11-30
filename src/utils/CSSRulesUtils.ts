@@ -89,6 +89,9 @@ class CSSRulesUtils {
 
     for (const rule of this.rules) {
       const result = parseCSSStyleRule(element, rule);
+      if (result.rules.some(r => r.selector === '*')) {
+        continue;
+      }
 
       if (result.mediaCondition) {
         if (result.rules.length <= 0) continue;
@@ -139,6 +142,16 @@ class CSSRulesUtils {
       ) as SetRequired<ElementAppliedCSS, 'mediaCondition'>;
     });
 
+    const resolveCSSVariables = (element: Element, cssText: string): string => {
+      return cssText.replace(/var\((--[^,)]+)(?:,\s*([^)]+))?\)/g, (_, variable, fallback) => {
+        const computedStyle = getComputedStyle(element);
+        const value = computedStyle.getPropertyValue(variable).trim();
+        return value || fallback || '';
+      });
+    };
+    mainRules.cssText = resolveCSSVariables(element, mainRules.cssText);
+
+    
     return {
       ...mainRules,
       animation: animationRules,
