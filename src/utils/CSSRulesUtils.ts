@@ -89,7 +89,14 @@ class CSSRulesUtils {
 
     for (const rule of this.rules) {
       const result = parseCSSStyleRule(element, rule);
-      if (result.rules.some(r => r.selector === '*')) {
+      if (
+        result.rules.some(
+          (r) =>
+            r.selector === '*' ||
+            r.selector === 'body' ||
+            r.selector === 'html',
+        )
+      ) {
         continue;
       }
 
@@ -143,15 +150,17 @@ class CSSRulesUtils {
     });
 
     const resolveCSSVariables = (element: Element, cssText: string): string => {
-      return cssText.replace(/var\((--[^,)]+)(?:,\s*([^)]+))?\)/g, (_, variable, fallback) => {
-        const computedStyle = getComputedStyle(element);
-        const value = computedStyle.getPropertyValue(variable).trim();
-        return value || fallback || '';
-      });
+      return cssText.replace(
+        /var\((--[^,)]+)(?:,\s*([^)]+))?\)/g,
+        (_, variable, fallback) => {
+          const computedStyle = getComputedStyle(element);
+          const value = computedStyle.getPropertyValue(variable).trim();
+          return value || fallback || '';
+        },
+      );
     };
     mainRules.cssText = resolveCSSVariables(element, mainRules.cssText);
 
-    
     return {
       ...mainRules,
       animation: animationRules,

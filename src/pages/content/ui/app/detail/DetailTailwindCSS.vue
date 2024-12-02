@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-center justify-between">
-  <div class="text-sm font-semibold">Tailwind CSS</div>
+    <div class="text-sm font-semibold">Tailwind CSS</div>
     <UiButton
       size="sm"
       variant="secondary"
@@ -38,6 +38,7 @@ import { useAppProvider } from '../../app-plugin';
 import { TailwindConverter } from 'css-to-tailwindcss';
 import { copyToClipboard } from '@root/src/utils/helper';
 import { theme } from 'tailwindcss/defaultConfig';
+import { parseClassToTailwind } from '@root/src/utils/TailwindCSS-parser';
 
 interface Props {
   styleId?: string;
@@ -56,11 +57,7 @@ const codemirror = ref<InstanceType<typeof UiCodemirror> | null>(null);
 
 const appProvider = useAppProvider();
 
-const editorExtensions: Extension[] = [
-  css(),
-  color,
-  EditorView.lineWrapping,
-];
+const editorExtensions: Extension[] = [css(), color, EditorView.lineWrapping];
 
 const converter = new TailwindConverter({
   remInPx: 16,
@@ -72,8 +69,8 @@ const updateEditor = (newValue: string) => {
       changes: {
         from: 0,
         to: codemirror.value.editorView.state.doc.length,
-        insert: newValue
-      }
+        insert: newValue,
+      },
     });
   }
 };
@@ -82,57 +79,24 @@ watch(
   () => code.value,
   (newValue) => {
     updateEditor(newValue);
-  }
+  },
 );
 
 watch(
   () => props.cssText,
-  async (newValue) => {
-    let minBreakpointTailwind = '';
-    let maxBreakpointTailwind = '';
-    for (const media of props.media) {
-      console.log(media);
-      const minWidthMatch = media.mediaCondition.match(/min-width:\s*(\d+)px/);
-      const maxWidthMatch = media.mediaCondition.match(/max-width:\s*(\d+)px/);
-      if (minWidthMatch) {
-        const minWidth = parseInt(minWidthMatch[1]);
-        // find the closest breakpoint
-        const closestBreakpoint = Object.entries(theme?.screens || {}).reduce((prev, [name, value]) => {
-          const size = parseInt(value.toString().replace('px', ''));
-          return Math.abs(size - minWidth) < Math.abs(prev[0] - minWidth) ? [size, name] : prev;
-        }, [Infinity, '']);
-        const converted = await converter.convertCSS('.foo{' + media.cssText + '}');
-        minBreakpointTailwind += converted.nodes[0].tailwindClasses.map(cls => `${closestBreakpoint[1]}:${cls}`).join(' ') + ' ';
-      }
-      if (maxWidthMatch) {
-        const maxWidth = parseInt(maxWidthMatch[1]);
-        // find the closest breakpoint
-        const closestBreakpoint = Object.entries(theme?.screens || {}).reduce((prev, [name, value]) => {
-          const size = parseInt(value.toString().replace('px', ''));
-          return Math.abs(size - maxWidth) < Math.abs(prev[0] - maxWidth) ? [size, name] : prev;
-        }, [Infinity, '']);
-        const converted = await converter.convertCSS('.foo{' + media.cssText + '}');
-        maxBreakpointTailwind += converted.nodes[0].tailwindClasses.map(cls => `max-${closestBreakpoint[1]}:${cls}`).join(' ') + ' ';
-      }
-    }
-
-    const converted = await converter.convertCSS('.foo{' + newValue + '}');
-
-    const baseScreen = converted.nodes[0].tailwindClasses;
-    if(minBreakpointTailwind) {
-      baseScreen.push(...minBreakpointTailwind.split(' '));
-    }
-    if(maxBreakpointTailwind) {
-      baseScreen.push(...maxBreakpointTailwind.split(' '));
-    }
-    code.value = baseScreen.join(' ');
+  (newValue) => {
+    parseClassToTailwind({
+      cssText: newValue,
+      media: props.media,
+    }).then((tailwindClasses) => {
+      code.value = tailwindClasses.responsive;
+    });
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 const isCopied = shallowRef<number | string | null>(null);
 function copyChanges() {
-
   copyToClipboard(toRaw(code.value))
     .then(() => {
       isCopied.value = 'all';
